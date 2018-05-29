@@ -1,0 +1,11 @@
+[Unit]
+Description=Main nlts application
+
+[Service]
+ExecStart = /usr/bin/nlts
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

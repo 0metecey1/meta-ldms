@@ -1,0 +1,25 @@
+From 7188dc00fd52aa7220c770f035f7ce307b17a758 Mon Sep 17 00:00:00 2001
+From: Torsten Coym <torsten.coym@novaled.com>
+Date: Tue, 24 Apr 2018 17:45:09 +0200
+Subject: [PATCH] change standard dtb file to ldms
+
+---
+ include/configs/colibri_vf.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/configs/colibri_vf.h b/include/configs/colibri_vf.h
+index db610d5..5178ebf 100644
+--- a/include/configs/colibri_vf.h
++++ b/include/configs/colibri_vf.h
+@@ -179,7 +179,7 @@
+ 	"console=ttyLP0\0" \
+ 	"defargs=user_debug=30\0" \
+ 	"dfu_alt_info=" DFU_ALT_NAND_INFO "\0" \
+-	"fdt_board=eval-v3\0" \
++	"fdt_board=ldms\0" \
+ 	"fdt_fixup=;\0" \
+ 	"kernel_file=zImage\0" \
+ 	"mtdparts=" MTDPARTS_DEFAULT "\0" \
+-- 
+2.1.4
+

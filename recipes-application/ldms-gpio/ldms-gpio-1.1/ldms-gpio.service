@@ -1,0 +1,8 @@
+[Unit]
+Description=Setting up  GPIO sysfs interface
+
+[Service]
+ExecStart = /usr/bin/ldms-gpio.sh
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Beacon for network discovery of the VOST ports
+
+[Service]
+ExecStart = /usr/bin/nltsbeac
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

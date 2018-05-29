@@ -1,0 +1,58 @@
+#!/bin/sh
+# Basic settings to access low-level functions from userspace
+
+#GPIO settings
+#Supply rail selections, mutual exclusive, ensure by software!
+DCDC_SEL_LO=98  # VSS=-19.5V, VDD=10.5V
+DCDC_SEL_MID=5  # VSS=-15.5V, VDD=15.5V
+DCDC_SEL_HI=103 # VSS=-10.5V, VDD=10.5V
+
+DCDC_EN=96 # Enable DC/DC converter
+LDO_EN=63  # Enable LDO regulator
+
+EXT_INTR=68
+
+PMU_RST=88
+PMU_TMP=127
+PMU_CG=118
+PMU_BUSY=119
+
+ADC_SDI=91 # Needs to be pulled to VIO to mimic 3-wire SPI interface
+
+# configure SYSFS interface
+echo ${DCDC_SEL_LO} > /sys/class/gpio/export
+echo ${DCDC_SEL_MID} > /sys/class/gpio/export
+echo ${DCDC_SEL_HI} > /sys/class/gpio/export
+echo ${DCDC_EN} > /sys/class/gpio/export
+echo ${LDO_EN} > /sys/class/gpio/export
+echo ${EXT_INTR} > /sys/class/gpio/export
+echo ${PMU_RST} > /sys/class/gpio/export
+echo ${PMU_TMP} > /sys/class/gpio/export
+echo ${PMU_CG} > /sys/class/gpio/export
+echo ${PMU_BUSY} > /sys/class/gpio/export
+echo ${ADC_SDI} > /sys/class/gpio/export
+
+echo "out" > /sys/class/gpio/gpio${DCDC_SEL_LO}/direction
+echo "out" > /sys/class/gpio/gpio${DCDC_SEL_MID}/direction
+echo "out" > /sys/class/gpio/gpio${DCDC_SEL_HI}/direction
+echo "out" > /sys/class/gpio/gpio${DCDC_EN}/direction
+echo "out" > /sys/class/gpio/gpio${LDO_EN}/direction
+echo "out" > /sys/class/gpio/gpio${EXT_INTR}/direction
+echo "out" > /sys/class/gpio/gpio${PMU_RST}/direction
+echo "in" > /sys/class/gpio/gpio${PMU_TMP}/direction
+echo "in" > /sys/class/gpio/gpio${PMU_CG}/direction
+echo "in" > /sys/class/gpio/gpio${PMU_BUSY}/direction
+echo "out" > /sys/class/gpio/gpio${ADC_SDI}/direction
+
+# ADC_SDI pin needs to be always 'high' to enable SPI communication
+echo 1 > /sys/class/gpio/gpio${ADC_SDI}/value
+
+# Configure PWM channel attached to LED driver TLC5948a
+# GSCK
+# PWM_B <-> FTM1_CH0 <-> PTB8 <-> Pin 22
+echo 0 > /sys/class/pwm/pwmchip8/export
+echo 1000 > /sys/class/pwm/pwmchip8/pwm0/period # t_period in nano seconds > 10
+echo 500 > /sys/class/pwm/pwmchip8/pwm0/duty_cycle # t_on in nano seconds, < t_period
+echo 1 > /sys/class/pwm/pwmchip8/pwm0/enable
+
+
