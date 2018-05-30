@@ -1,0 +1,471 @@
+From 88c00992abe7940dad839bce687c57e45e1ae6a8 Mon Sep 17 00:00:00 2001
+From: Build user <build@vps3073>
+Date: Wed, 30 May 2018 12:36:12 +0200
+Subject: [PATCH] Changed pin muxing, enabled dspi2, dspi3, i2c3, added ads1015
+ hwmon to i2c0, added ad7940 iio as ad7685 pmu MEASOUT adc
+
+---
+ arch/arm/boot/dts/Makefile               |   2 +
+ arch/arm/boot/dts/vf-colibri-ldms.dtsi   | 296 +++++++++++++++++++++++++++++++
+ arch/arm/boot/dts/vf-colibri.dtsi        |  53 ++++++
+ arch/arm/boot/dts/vf500-colibri-ldms.dts |  22 +++
+ arch/arm/boot/dts/vf610-colibri-ldms.dts |  17 ++
+ 5 files changed, 390 insertions(+)
+ create mode 100644 arch/arm/boot/dts/vf-colibri-ldms.dtsi
+ create mode 100644 arch/arm/boot/dts/vf500-colibri-ldms.dts
+ create mode 100644 arch/arm/boot/dts/vf610-colibri-ldms.dts
+
+diff --git a/arch/arm/boot/dts/Makefile b/arch/arm/boot/dts/Makefile
+index a5738197983a..379767cbf37b 100644
+--- a/arch/arm/boot/dts/Makefile
++++ b/arch/arm/boot/dts/Makefile
+@@ -359,6 +359,8 @@ dtb-$(CONFIG_SOC_VF610) += \
+ 	vf610-colibri-eval-v3.dtb \
+ 	vf500-colibri-aster.dtb \
+ 	vf610-colibri-aster.dtb \
++	vf500-colibri-ldms.dtb \
++	vf610-colibri-ldms.dtb \
+ 	vf610m4-colibri.dtb \
+ 	vf500-colibri-dual-eth.dtb \
+ 	vf610-colibri-dual-eth.dtb \
+diff --git a/arch/arm/boot/dts/vf-colibri-ldms.dtsi b/arch/arm/boot/dts/vf-colibri-ldms.dtsi
+new file mode 100644
+index 000000000000..bb42fc5d2ef5
+--- /dev/null
++++ b/arch/arm/boot/dts/vf-colibri-ldms.dtsi
+@@ -0,0 +1,296 @@
++/*
++ * Copyright 2017 Toradex AG
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ */
++
++#include <dt-bindings/input/input.h>
++
++/ {
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	aliases {
++		ethernet0 = &fec1;
++		ethernet1 = &fec0;
++	};
++
++	panel: panel {
++		compatible = "edt,et057090dhu";
++		backlight = <&bl>;
++		power-supply =  <&reg_3v3>;
++	};
++
++	extcon_usbc_det: usbc_det {
++		compatible = "linux,extcon-usb-gpio";
++		debounce = <25>;
++		id-gpio = <&gpio3 6 GPIO_ACTIVE_HIGH>;
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_usbc_det>;
++	};
++
++	reg_3v3: regulator-3v3 {
++		compatible = "regulator-fixed";
++		regulator-name = "3.3V";
++		regulator-min-microvolt = <3300000>;
++		regulator-max-microvolt = <3300000>;
++		regulator-always-on;
++	};
++
++	reg_5v0: regulator-5v0 {
++		compatible = "regulator-fixed";
++		regulator-name = "5V";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		regulator-always-on;
++	};
++
++	reg_usbh_vbus: regulator-usbh-vbus {
++		compatible = "regulator-fixed";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_usbh1_reg>;
++		regulator-name = "VCC_USB[1-4]";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		gpio = <&gpio2 19 GPIO_ACTIVE_LOW>; /* USBH_PEN resp. USBH_P_EN */
++		vin-supply = <&reg_5v0>;
++	};
++
++        reg_adc_3v3: fixedregulator {
++                compatible = "regulator-fixed";
++                regulator-name = "adc-supply";
++                regulator-min-microvolt = <5000000>;
++                regulator-max-microvolt = <5000000>;
++    		regulator-always-on;
++        };
++    
++	gpio-keys {
++		compatible = "gpio-keys";
++		pinctrl-names = "default";
++		pinctrl-0 = <&pinctrl_gpiokeys>;
++
++		power {
++			label = "Wake-Up";
++			gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>;
++			linux,code = <KEY_WAKEUP>;
++			debounce-interval = <10>;
++			gpio-key,wakeup;
++		};
++	};
++};
++
++&bl {
++	brightness-levels = <0 4 8 16 32 64 128 255>;
++	default-brightness-level = <6>;
++	power-supply =  <&reg_3v3>;
++	status  = "disabled";
++};
++
++&dcu0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_dcu0_1>;
++	fsl,panel = <&panel>;
++	status = "disabled";
++};
++
++&dspi0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_dspi0>;
++	status = "okay";
++
++	spidev0: spidev@0 {
++		compatible = "toradex,evalspi";
++		reg = <0>;
++		spi-max-frequency = <50000000>;
++	};
++};
++
++&dspi2 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_dspi2>;
++	status = "okay";
++    
++    /*
++     * LED driver TLC5948A
++     */   
++        spidev2: spidev@2 {
++               compatible = "toradex,evalspi";
++               reg = <0>;
++               spi-max-frequency = <50000000>;
++        };
++};
++
++&dspi3 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_dspi3>;
++	status = "okay";
++
++        adcpmu: ad7685@1 { /* 16-bit MEASOUT */
++               status = "okay";
++               compatible = "adi,ad7940"; /* 14-bit type! */
++               reg = <0>;
++               spi-max-frequency = <500000>;
++               spi-cpha;
++               vcc-supply = <&reg_adc_3v3>;
++    };
++};
++
++&esdhc1 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_esdhc1>;
++	bus-width = <4>;
++	status = "disabled";
++};
++
++&fec1 {
++	phy-mode = "rmii";
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_fec1>;
++	status = "okay";
++};
++
++&i2c0 {
++	status = "okay";
++
++	eeprom: eeprom@50 {
++		compatible = "at,spd";
++		reg = <0x50>;
++		status = "okay";
++	};
++	
++	hwmonadc: ads1015@49 {
++		compatible = "ti,ads1015";
++		reg = <0x49>;
++		#address-cells = <1>;
++		#size-cells = <0>;
++		
++		channel@4 { /* AVDD = 6*AIN0 */
++			reg = <4>;
++			ti,gain = <2>;
++			ti,datarate = <0>;
++		};
++
++		channel@5 { /* SEPICout = 6*AIN0 */
++			reg = <4>;
++			ti,gain = <2>;
++			ti,datarate = <0>;
++		};
++
++		channel@6 { /* SUKout = 6*AIN0 - 25V */
++			reg = <4>;
++			ti,gain = <2>;
++			ti,datarate = <0>;
++		};
++
++		channel@7 { /* VSS = 6*AIN0 - 25V */
++			reg = <4>;
++			ti,gain = <2>;
++			ti,datarate = <0>;
++		};
++	};
++};
++
++&i2c3 {
++	clock-frequency = <100000>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_i2c3>;
++	status = "okay";
++};
++
++&pwm0 {
++	status = "okay";
++};
++
++&pwm1 {
++	status = "okay";
++};
++
++&reg_module_3v3 {
++	vin-supply = <&reg_3v3>;
++};
++
++&tcon0 {
++	status = "okay";
++};
++
++&uart0 {
++	status = "okay";
++};
++
++&uart1 {
++	status = "okay";
++};
++
++&uart2 {
++	status = "okay";
++};
++
++&usbdev0 {
++	extcon = <&extcon_usbc_det>, <&extcon_usbc_det>;
++};
++
++&usbh1 {
++	vbus-supply = <&reg_usbh_vbus>;
++};
++
++&iomuxc {
++	vf610-colibri {
++		pinctrl_gpiokeys: gpiokeys {
++			fsl,pins = <
++				VF610_PAD_PTB19__GPIO_41	0x218d
++			>;
++		};
++
++
++		pinctrl_i2c1: i2c1grp {
++			fsl,pins = <
++				VF610_PAD_PTB16__I2C1_SCL       0x37ff
++				VF610_PAD_PTB17__I2C1_SDA	0x37ff
++			>;
++		};
++
++		pinctrl_i2c2: i2c2grp {
++			fsl,pins = <
++				VF610_PAD_PTD28__I2C2_SCL       0x37ff
++				VF610_PAD_PTD27__I2C2_SDA	0x37ff
++			>;
++		};
++
++		pinctrl_i2c3: i2c3grp {
++			fsl,pins = <
++				VF610_PAD_PTA30__I2C3_SCL       0x37ff
++				VF610_PAD_PTA31__I2C3_SDA	0x37ff
++			>;
++		};
++
++		pinctrl_dspi0: dspi0grp {
++			fsl,pins = <
++				VF610_PAD_PTB19__DSPI0_CS0	0x1182
++				VF610_PAD_PTB20__DSPI0_SIN	0x1181
++				VF610_PAD_PTB21__DSPI0_SOUT	0x1182
++				VF610_PAD_PTB22__DSPI0_SCK	0x1182
++			>;
++		};
++
++       	        pinctrl_dspi2: dspi2grp {
++       	        	fsl,pins = <
++       	        		VF610_PAD_PTD30__DSPI2_CS0      0x1182
++       	        		VF610_PAD_PTD29__DSPI2_SIN      0x1181
++       	        		VF610_PAD_PTD28__DSPI2_SOUT     0x1182
++       	        		VF610_PAD_PTD27__DSPI2_SCK      0x1182
++       	        	>;
++       	        };
++
++		pinctrl_dspi3: dspi3grp {
++			fsl,pins = <
++				VF610_PAD_PTD10__DSPI3_CS0      0x1182
++				VF610_PAD_PTD11__DSPI3_SIN	0x1181
++				VF610_PAD_PTD13__DSPI3_SCK      0x1182
++			>;
++		};
++	};
++};
+diff --git a/arch/arm/boot/dts/vf-colibri.dtsi b/arch/arm/boot/dts/vf-colibri.dtsi
+index 7d11341cc567..ddaf5565d4e5 100644
+--- a/arch/arm/boot/dts/vf-colibri.dtsi
++++ b/arch/arm/boot/dts/vf-colibri.dtsi
+@@ -224,6 +224,15 @@
+ 			>;
+ 		};
+ 
++		pinctrl_dspi0: dspi0grp {
++			fsl,pins = <
++				VF610_PAD_PTB19__DSPI0_CS0	0x33e2
++				VF610_PAD_PTB20__DSPI0_SIN	0x33e1
++				VF610_PAD_PTB21__DSPI0_SOUT	0x33e2
++				VF610_PAD_PTB22__DSPI0_SCK	0x33e2
++			>;
++		};
++
+ 		pinctrl_dspi1: dspi1grp {
+ 			fsl,pins = <
+ 				VF610_PAD_PTD5__DSPI1_CS0		0x33e2
+@@ -233,6 +242,23 @@
+ 			>;
+ 		};
+ 
++		pinctrl_dspi2: dspi2grp {
++			fsl,pins = <
++				VF610_PAD_PTD30__DSPI2_CS0  0x33e2
++				VF610_PAD_PTD29__DSPI2_SIN  0x33e1
++				VF610_PAD_PTD28__DSPI2_SOUT 0x33e2
++				VF610_PAD_PTD27__DSPI2_SCK  0x33e2
++			>;
++		};
++
++		pinctrl_dspi3: dspi3grp {
++			fsl,pins = <
++				VF610_PAD_PTD10__DSPI3_CS0  0x33e2
++				VF610_PAD_PTD11__DSPI3_SIN	0x33e1
++				VF610_PAD_PTD13__DSPI3_SCK  0x33e2
++			>;
++		};
++
+ 		pinctrl_esdhc1: esdhc1grp {
+ 			fsl,pins = <
+ 				VF610_PAD_PTA24__ESDHC1_CLK	0x31ef
+@@ -303,6 +329,12 @@
+ 				VF610_PAD_PTB26__GPIO_96	0x22ed
+ 				VF610_PAD_PTB28__GPIO_98	0x22ed
+ 				VF610_PAD_PTC30__GPIO_103	0x22ed
++				/* LDMS add BEGIN */
++				VF610_PAD_PTE13__GPIO_118	0x22ed
++				VF610_PAD_PTE14__GPIO_119	0x22ed
++				VF610_PAD_PTE21__GPIO_126	0x22ed /* pmu_rst */
++				VF610_PAD_PTE22__GPIO_127	0x22ed
++				/* LDMS add END */
+ 				VF610_PAD_PTA7__GPIO_134	0x22ed
+ 			>;
+ 		};
+@@ -328,6 +360,27 @@
+ 			>;
+ 		};
+ 
++		pinctrl_i2c1: i2c1grp {
++			fsl,pins = <
++				VF610_PAD_PTB16__I2C1_SCL   0x37ff
++				VF610_PAD_PTB17__I2C1_SDA		0x37ff
++			>;
++		};
++
++		pinctrl_i2c2: i2c2grp {
++			fsl,pins = <
++				VF610_PAD_PTD28__I2C2_SCL   0x37ff
++				VF610_PAD_PTD27__I2C2_SDA		0x37ff
++			>;
++		};
++
++		pinctrl_i2c3: i2c3grp {
++			fsl,pins = <
++				VF610_PAD_PTA30__I2C3_SCL   0x37ff
++				VF610_PAD_PTA31__I2C3_SDA		0x37ff
++			>;
++		};
++
+ 		pinctrl_nfc: nfcgrp {
+ 			fsl,pins = <
+ 				VF610_PAD_PTD23__NF_IO7		0x28df
+diff --git a/arch/arm/boot/dts/vf500-colibri-ldms.dts b/arch/arm/boot/dts/vf500-colibri-ldms.dts
+new file mode 100644
+index 000000000000..ab1ac77a12e4
+--- /dev/null
++++ b/arch/arm/boot/dts/vf500-colibri-ldms.dts
+@@ -0,0 +1,22 @@
++/*
++ * Copyright 2017 Toradex AG
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ */
++
++/dts-v1/;
++#include "vf500-colibri.dtsi"
++#include "vf-colibri-ldms.dtsi"
++
++/ {
++	model = "Toradex Colibri VF50 on Contronix LDMS Board";
++	compatible = "toradex,vf500-colibri_vf50-on-ldms", "toradex,vf500-colibri_vf50", "fsl,vf500";
++};
++
++&touchscreen {
++	vf50-ts-min-pressure = <200>;
++	status = "okay";
++};
+diff --git a/arch/arm/boot/dts/vf610-colibri-ldms.dts b/arch/arm/boot/dts/vf610-colibri-ldms.dts
+new file mode 100644
+index 000000000000..b666559c6ff5
+--- /dev/null
++++ b/arch/arm/boot/dts/vf610-colibri-ldms.dts
+@@ -0,0 +1,17 @@
++/*
++ * Copyright 2017 Toradex AG
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ */
++
++/dts-v1/;
++#include "vf610-colibri.dtsi"
++#include "vf-colibri-ldms.dtsi"
++
++/ {
++	model = "Toradex Colibri VF61 on Contronix LDMS Board";
++	compatible = "toradex,vf610-colibri_vf61-on-ldms", "toradex,vf610-colibri_vf61", "fsl,vf610";
++};
+-- 
+2.11.0
+

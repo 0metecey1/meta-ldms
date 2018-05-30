@@ -14,9 +14,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/linux-toradex-4.4:"
 # SRC_URI += "file://0001-add-ldms-specific-devicetree.patch"
 # SRC_URI += "file://0001-include-ldms-devicetree-in-Makefile.patch"
 # SRC_URI += "file://defconfig"
-SRC_URI_append_colibri-vf-ldms = " file://0001-calibrate.c-Added-some-printk-statements.patch"
-SRC_URI_append_colibri-vf-ldms = " file://0001-add-ldms-specific-devicetree.patch"
-SRC_URI_append_colibri-vf-ldms = " file://0001-include-ldms-devicetree-in-Makefile.patch"
+SRC_URI_append_colibri-vf-ldms = " file://0001-Changed-pin-muxing-enabled-dspi2-dspi3-i2c3-added-ad.patch"
 SRC_URI_append_colibri-vf-ldms = " file://defconfig"
 
 
