@@ -3,7 +3,7 @@
 #
 
 inherit systemd
-DESCRIPTION = "ldms GPIO setup systemd service"
+DESCRIPTION = "ldms GPIO setup snd configuration ystemd service"
 SECTION = "examples"
 LICENSE = "CLOSED"
 
@@ -11,8 +11,8 @@ LICENSE = "CLOSED"
 # FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}-${PV}:"
 
 # Use local systemd service file
-SRC_URI = "file://ldms-gpio.service"
-SRC_URI += "file://ldms-gpio.sh"
+SRC_URI = "file://ldms-cfg.service"
+SRC_URI += "file://ldms-cfg"
 
 # Make sure our source directory (for the build) matches the directory structure in the tarball
 # S = "${WORKDIR}"
@@ -21,13 +21,13 @@ SRC_URI += "file://ldms-gpio.sh"
 do_install() {
     # Copy service file
     install -d ${D}/${systemd_unitdir}/system
-    install -c -m 644 ${WORKDIR}/ldms-gpio.service ${D}/${systemd_unitdir}/system
+    install -c -m 644 ${WORKDIR}/ldms-cfg.service ${D}/${systemd_unitdir}/system
     # Copy shell script
     install -d ${D}/${bindir}
-    install -c -m 755 ${WORKDIR}/ldms-gpio.sh ${D}/${bindir}
+    install -c -m 755 ${WORKDIR}/ldms-cfg ${D}/${bindir}
 }
 
 NATIVE_SYSTEMD_SUPPORT = "1"
 SYSTEMD_PACKAGES = "${PN}"
-SYSTEMD_SERVICE_${PN} = "ldms-gpio.service"
-FILES_${PN} = "${bindir}/ldms-gpio.sh"
+SYSTEMD_SERVICE_${PN} = "ldms-cfg.service"
+FILES_${PN} = "${bindir}/ldms-cfg"

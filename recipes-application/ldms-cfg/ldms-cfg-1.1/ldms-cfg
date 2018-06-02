@@ -17,7 +17,7 @@ PMU_TMP=127
 PMU_CG=118
 PMU_BUSY=119
 
-ADC_SDI=91 # Needs to be pulled to VIO to mimic 3-wire SPI interface
+ADC_SDI=91 # Needs to be pulled to VIO to mimic 3-wire SPI interface for AD7685
 
 # configure SYSFS interface
 echo ${DCDC_SEL_LO} > /sys/class/gpio/export
@@ -46,6 +46,9 @@ echo "out" > /sys/class/gpio/gpio${ADC_SDI}/direction
 
 # ADC_SDI pin needs to be always 'high' to enable SPI communication
 echo 1 > /sys/class/gpio/gpio${ADC_SDI}/value
+# Select mid point supply rails
+echo 1 > /sys/class/gpio/gpio${DCDC_SEL_MID}/value
+# Ensure supply rail voltage levels are selected, but power is still turned off!
 
 # Configure PWM channel attached to LED driver TLC5948a
 # GSCK
