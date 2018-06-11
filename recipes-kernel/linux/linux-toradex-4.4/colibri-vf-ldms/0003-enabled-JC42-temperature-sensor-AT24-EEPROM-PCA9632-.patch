@@ -1,0 +1,410 @@
+From 3394434445e947f8c6be0e7200a0e0868b47bfab Mon Sep 17 00:00:00 2001
+From: Build user <build@vps3073>
+Date: Fri, 8 Jun 2018 11:27:24 +0200
+Subject: [PATCH 3/4] enabled JC42 temperature sensor, AT24 EEPROM, PCA9632
+ LED, PCA9536 GPIO, in kernel and device tree
+
+---
+ arch/arm/boot/dts/vf-colibri-ldms.dtsi | 168 +++++++++++++++++----------------
+ arch/arm/boot/dts/vf-colibri.dtsi      |  44 ++++-----
+ arch/arm/configs/colibri_vf_defconfig  |   6 ++
+ 3 files changed, 115 insertions(+), 103 deletions(-)
+
+diff --git a/arch/arm/boot/dts/vf-colibri-ldms.dtsi b/arch/arm/boot/dts/vf-colibri-ldms.dtsi
+index bb42fc5d2ef5..bf59c33f4316 100644
+--- a/arch/arm/boot/dts/vf-colibri-ldms.dtsi
++++ b/arch/arm/boot/dts/vf-colibri-ldms.dtsi
+@@ -60,27 +60,13 @@
+ 		vin-supply = <&reg_5v0>;
+ 	};
+ 
+-        reg_adc_3v3: fixedregulator {
++        reg_adc_5v_pmu_meas: fixedregulator {
+                 compatible = "regulator-fixed";
+-                regulator-name = "adc-supply";
++                regulator-name = "VrefPMU5V";
+                 regulator-min-microvolt = <5000000>;
+                 regulator-max-microvolt = <5000000>;
+     		regulator-always-on;
+         };
+-    
+-	gpio-keys {
+-		compatible = "gpio-keys";
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&pinctrl_gpiokeys>;
+-
+-		power {
+-			label = "Wake-Up";
+-			gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>;
+-			linux,code = <KEY_WAKEUP>;
+-			debounce-interval = <10>;
+-			gpio-key,wakeup;
+-		};
+-	};
+ };
+ 
+ &bl {
+@@ -98,6 +84,7 @@
+ };
+ 
+ &dspi0 {
++	bus-num = <0>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_dspi0>;
+ 	status = "okay";
+@@ -110,6 +97,7 @@
+ };
+ 
+ &dspi2 {
++	bus-num = <2>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_dspi2>;
+ 	status = "okay";
+@@ -125,6 +113,7 @@
+ };
+ 
+ &dspi3 {
++	bus-num = <3>;
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_dspi3>;
+ 	status = "okay";
+@@ -135,7 +124,7 @@
+                reg = <0>;
+                spi-max-frequency = <500000>;
+                spi-cpha;
+-               vcc-supply = <&reg_adc_3v3>;
++               vcc-supply = <&reg_adc_5v_pmu_meas>;
+     };
+ };
+ 
+@@ -170,25 +159,25 @@
+ 		
+ 		channel@4 { /* AVDD = 6*AIN0 */
+ 			reg = <4>;
+-			ti,gain = <2>;
++			ti,gain = <0>;
+ 			ti,datarate = <0>;
+ 		};
+ 
+ 		channel@5 { /* SEPICout = 6*AIN0 */
+-			reg = <4>;
+-			ti,gain = <2>;
++			reg = <5>;
++			ti,gain = <0>;
+ 			ti,datarate = <0>;
+ 		};
+ 
+ 		channel@6 { /* SUKout = 6*AIN0 - 25V */
+-			reg = <4>;
+-			ti,gain = <2>;
++			reg = <6>;
++			ti,gain = <0>;
+ 			ti,datarate = <0>;
+ 		};
+ 
+ 		channel@7 { /* VSS = 6*AIN0 - 25V */
+-			reg = <4>;
+-			ti,gain = <2>;
++			reg = <7>;
++			ti,gain = <0>;
+ 			ti,datarate = <0>;
+ 		};
+ 	};
+@@ -199,6 +188,80 @@
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&pinctrl_i2c3>;
+ 	status = "okay";
++
++	pca9632: pca9632 { /* LED driver */
++		compatible = "nxp,pca9632";
++		#address-cells = <1>;
++		#size-cells = <0>;
++		reg = <0x62>;
++		nxp,totem-pole; /* use push-pull outputs */
++		nxp,inverted-out;
++
++		led0@0 {
++			label = "r_uv";
++			reg = <0>;
++			linux,default-trigger = "none";
++		};	
++
++		led1@1 {
++			label = "g";
++			reg = <1>;
++			linux,default-trigger = "none";
++		};	
++
++		led2@2 {
++			label = "b";
++			reg = <2>;
++			linux,default-trigger = "none";
++		};	
++
++		led3@3 {
++			label = "w";
++			reg = <3>;
++			linux,default-trigger = "none";
++		};
++	};
++
++	pca9536: pca9536@41 { /* I2C GPIO expander */
++		compatible = "nxp,pca9536";
++		reg = <0x41>;
++		gpio-controller;
++		#gpio-cells = <1>;
++		pinctrl-names = "default";
++	};	
++	
++	se97lum: se97@1d { /* Temperature sensor on luminance sensing board */
++		compatible = "jc42";
++		reg = <0x1d>;
++	};
++
++	se97top: se97@1e { /* Temperature sensor on TE DUT interface board */
++		compatible = "jc42";
++		reg = <0x1e>;
++	};
++
++	se97bot: se97@1f { /* Temperature sensor on BE DUT interface board */
++		compatible = "jc42";
++		reg = <0x1f>;
++	};
++
++	eepromtop: eeprom@55 { /* EEPROM on TE DUT interface board */
++		compatible = "at,spd";
++		reg = <0x55>;
++		status = "okay";
++	};
++
++	eeprombot: eeprom@56 { /* EEPROM on BE DUT interface board */
++		compatible = "at,spd";
++		reg = <0x56>;
++		status = "okay";
++	};
++
++	eepromillum: eeprom@57 { /* EEPROM on illumination board */
++		compatible = "at,spd";
++		reg = <0x57>;
++		status = "okay";
++	};
+ };
+ 
+ &pwm0 {
+@@ -237,60 +300,3 @@
+ 	vbus-supply = <&reg_usbh_vbus>;
+ };
+ 
+-&iomuxc {
+-	vf610-colibri {
+-		pinctrl_gpiokeys: gpiokeys {
+-			fsl,pins = <
+-				VF610_PAD_PTB19__GPIO_41	0x218d
+-			>;
+-		};
+-
+-
+-		pinctrl_i2c1: i2c1grp {
+-			fsl,pins = <
+-				VF610_PAD_PTB16__I2C1_SCL       0x37ff
+-				VF610_PAD_PTB17__I2C1_SDA	0x37ff
+-			>;
+-		};
+-
+-		pinctrl_i2c2: i2c2grp {
+-			fsl,pins = <
+-				VF610_PAD_PTD28__I2C2_SCL       0x37ff
+-				VF610_PAD_PTD27__I2C2_SDA	0x37ff
+-			>;
+-		};
+-
+-		pinctrl_i2c3: i2c3grp {
+-			fsl,pins = <
+-				VF610_PAD_PTA30__I2C3_SCL       0x37ff
+-				VF610_PAD_PTA31__I2C3_SDA	0x37ff
+-			>;
+-		};
+-
+-		pinctrl_dspi0: dspi0grp {
+-			fsl,pins = <
+-				VF610_PAD_PTB19__DSPI0_CS0	0x1182
+-				VF610_PAD_PTB20__DSPI0_SIN	0x1181
+-				VF610_PAD_PTB21__DSPI0_SOUT	0x1182
+-				VF610_PAD_PTB22__DSPI0_SCK	0x1182
+-			>;
+-		};
+-
+-       	        pinctrl_dspi2: dspi2grp {
+-       	        	fsl,pins = <
+-       	        		VF610_PAD_PTD30__DSPI2_CS0      0x1182
+-       	        		VF610_PAD_PTD29__DSPI2_SIN      0x1181
+-       	        		VF610_PAD_PTD28__DSPI2_SOUT     0x1182
+-       	        		VF610_PAD_PTD27__DSPI2_SCK      0x1182
+-       	        	>;
+-       	        };
+-
+-		pinctrl_dspi3: dspi3grp {
+-			fsl,pins = <
+-				VF610_PAD_PTD10__DSPI3_CS0      0x1182
+-				VF610_PAD_PTD11__DSPI3_SIN	0x1181
+-				VF610_PAD_PTD13__DSPI3_SCK      0x1182
+-			>;
+-		};
+-	};
+-};
+diff --git a/arch/arm/boot/dts/vf-colibri.dtsi b/arch/arm/boot/dts/vf-colibri.dtsi
+index ddaf5565d4e5..11959f28c22b 100644
+--- a/arch/arm/boot/dts/vf-colibri.dtsi
++++ b/arch/arm/boot/dts/vf-colibri.dtsi
+@@ -253,9 +253,9 @@
+ 
+ 		pinctrl_dspi3: dspi3grp {
+ 			fsl,pins = <
+-				VF610_PAD_PTD10__DSPI3_CS0  0x33e2
++				VF610_PAD_PTD10__DSPI3_CS0  	0x33e2
+ 				VF610_PAD_PTD11__DSPI3_SIN	0x33e1
+-				VF610_PAD_PTD13__DSPI3_SCK  0x33e2
++				VF610_PAD_PTD13__DSPI3_SCK  	0x33e2
+ 			>;
+ 		};
+ 
+@@ -267,7 +267,7 @@
+ 				VF610_PAD_PTA27__ESDHC1_DAT1	0x31ef
+ 				VF610_PAD_PTA28__ESDHC1_DATA2	0x31ef
+ 				VF610_PAD_PTA29__ESDHC1_DAT3	0x31ef
+-				VF610_PAD_PTB20__GPIO_42	0x219d
++				/* VF610_PAD_PTB20__GPIO_42	0x219d --> dspi0 */
+ 			>;
+ 		};
+ 
+@@ -298,15 +298,15 @@
+ 				VF610_PAD_PTA17__GPIO_7		0x22ed
+ 				VF610_PAD_PTA20__GPIO_10	0x22ed
+ 				VF610_PAD_PTA21__GPIO_11	0x22ed
+-				VF610_PAD_PTA30__GPIO_20	0x22ed
+-				VF610_PAD_PTA31__GPIO_21	0x22ed
++				/* VF610_PAD_PTA30__GPIO_20	0x22ed --> i2c3grp */
++				/* VF610_PAD_PTA31__GPIO_21	0x22ed --> i2c3grp */ 
+ 				VF610_PAD_PTB6__GPIO_28		0x22ed
+ 				VF610_PAD_PTB7__GPIO_29		0x22ed
+ 				VF610_PAD_PTB16__GPIO_38	0x22ed
+ 				VF610_PAD_PTB17__GPIO_39	0x22ed
+ 				VF610_PAD_PTB18__GPIO_40	0x22ed
+-				VF610_PAD_PTB21__GPIO_43	0x22ed
+-				VF610_PAD_PTB22__GPIO_44	0x22ed
++				/* VF610_PAD_PTB21__GPIO_43	0x22ed --> dspi0grp */
++				/* VF610_PAD_PTB22__GPIO_44	0x22ed --> dspi0grp */
+ 				VF610_PAD_PTC1__GPIO_46		0x22ed
+ 				VF610_PAD_PTC2__GPIO_47		0x22ed
+ 				VF610_PAD_PTC3__GPIO_48		0x22ed
+@@ -315,17 +315,17 @@
+ 				VF610_PAD_PTC6__GPIO_51		0x22ed
+ 				VF610_PAD_PTC7__GPIO_52		0x22ed
+ 				VF610_PAD_PTC8__GPIO_53		0x22ed
+-				VF610_PAD_PTD30__GPIO_64	0x22ed
+-				VF610_PAD_PTD29__GPIO_65	0x22ed
+-				VF610_PAD_PTD28__GPIO_66	0x22ed
++				/* VF610_PAD_PTD30__GPIO_64	0x22ed --> dspi2grp */
++				/* VF610_PAD_PTD29__GPIO_65	0x22ed --> dspi2grp */
++				/* VF610_PAD_PTD28__GPIO_66	0x22ed --> dspi2grp */
+ 				VF610_PAD_PTD26__GPIO_68	0x22ed
+ 				VF610_PAD_PTD25__GPIO_69	0x22ed
+ 				VF610_PAD_PTD24__GPIO_70	0x22ed
+ 				VF610_PAD_PTD9__GPIO_88		0x22ed
+-				VF610_PAD_PTD10__GPIO_89	0x22ed
+-				VF610_PAD_PTD11__GPIO_90	0x22ed
++				/* VF610_PAD_PTD10__GPIO_89	0x22ed --> dspi3grp */
++				/* VF610_PAD_PTD11__GPIO_90	0x22ed --> dspi3grp */
+ 				VF610_PAD_PTD12__GPIO_91	0x22ed
+-				VF610_PAD_PTD13__GPIO_92	0x22ed
++				/* VF610_PAD_PTD13__GPIO_92	0x22ed --> dspi3grp */
+ 				VF610_PAD_PTB26__GPIO_96	0x22ed
+ 				VF610_PAD_PTB28__GPIO_98	0x22ed
+ 				VF610_PAD_PTC30__GPIO_103	0x22ed
+@@ -341,7 +341,7 @@
+ 
+ 		pinctrl_hog_1: hoggrp-1 { /* ATMEL MXT TOUCH */
+ 			fsl,pins = <
+-				VF610_PAD_PTD27__GPIO_67	0x22ed
++				/* VF610_PAD_PTD27__GPIO_67	0x22ed --> dspi2grp */
+ 				VF610_PAD_PTD31__GPIO_63	0x22ed
+ 			>;
+ 		};
+@@ -355,29 +355,29 @@
+ 
+ 		pinctrl_i2c0: i2c0grp {
+ 			fsl,pins = <
+-				VF610_PAD_PTB14__I2C0_SCL		0x37ff
+-				VF610_PAD_PTB15__I2C0_SDA		0x37ff
++				VF610_PAD_PTB14__I2C0_SCL	0x37ff
++				VF610_PAD_PTB15__I2C0_SDA	0x37ff
+ 			>;
+ 		};
+ 
+ 		pinctrl_i2c1: i2c1grp {
+ 			fsl,pins = <
+-				VF610_PAD_PTB16__I2C1_SCL   0x37ff
+-				VF610_PAD_PTB17__I2C1_SDA		0x37ff
++				VF610_PAD_PTB16__I2C1_SCL   	0x37ff
++				VF610_PAD_PTB17__I2C1_SDA	0x37ff
+ 			>;
+ 		};
+ 
+ 		pinctrl_i2c2: i2c2grp {
+ 			fsl,pins = <
+-				VF610_PAD_PTD28__I2C2_SCL   0x37ff
+-				VF610_PAD_PTD27__I2C2_SDA		0x37ff
++				VF610_PAD_PTD28__I2C2_SCL   	0x37ff
++				VF610_PAD_PTD27__I2C2_SDA	0x37ff
+ 			>;
+ 		};
+ 
+ 		pinctrl_i2c3: i2c3grp {
+ 			fsl,pins = <
+-				VF610_PAD_PTA30__I2C3_SCL   0x37ff
+-				VF610_PAD_PTA31__I2C3_SDA		0x37ff
++				VF610_PAD_PTA30__I2C3_SCL   	0x37ff
++				VF610_PAD_PTA31__I2C3_SDA	0x37ff
+ 			>;
+ 		};
+ 
+diff --git a/arch/arm/configs/colibri_vf_defconfig b/arch/arm/configs/colibri_vf_defconfig
+index 37b937ab20d9..04c56efb7b69 100644
+--- a/arch/arm/configs/colibri_vf_defconfig
++++ b/arch/arm/configs/colibri_vf_defconfig
+@@ -168,11 +168,13 @@ CONFIG_HW_RANDOM=y
+ CONFIG_I2C_CHARDEV=y
+ # CONFIG_I2C_HELPER_AUTO is not set
+ CONFIG_I2C_IMX=y
++CONFIG_EEPROM_AT24=y
+ CONFIG_SPI=y
+ CONFIG_SPI_FSL_DSPI=y
+ CONFIG_SPI_SPIDEV=y
+ CONFIG_GPIO_SYSFS=y
+ CONFIG_GPIO_GENERIC_PLATFORM=y
++CONFIG_GPIO_PCA953X=y
+ CONFIG_POWER_SUPPLY=y
+ CONFIG_POWER_RESET=y
+ CONFIG_POWER_RESET_GPIO=y
+@@ -261,6 +263,7 @@ CONFIG_LEDS_TRIGGER_ONESHOT=y
+ CONFIG_LEDS_TRIGGER_HEARTBEAT=y
+ CONFIG_LEDS_TRIGGER_BACKLIGHT=y
+ CONFIG_LEDS_TRIGGER_GPIO=y
++CONFIG_LEDS_PCA963X=y
+ CONFIG_RTC_CLASS=y
+ CONFIG_RTC_DRV_DS1307=y
+ CONFIG_RTC_DRV_SNVS=y
+@@ -275,7 +278,10 @@ CONFIG_IMX_RPMSG_TTY=m
+ CONFIG_VF610_RPMSG=m
+ CONFIG_SOC_BUS_VF610=y
+ CONFIG_EXTCON_USB_GPIO=y
++CONFIG_SENSORS_JC42=y
++CONFIG_SENSORS_ADS1015=y
+ CONFIG_IIO=y
++CONFIG_AD7476=y
+ CONFIG_VF610_ADC=y
+ CONFIG_VF610_DAC=y
+ CONFIG_IIO_SYSFS_TRIGGER=y
+-- 
+2.11.0
+

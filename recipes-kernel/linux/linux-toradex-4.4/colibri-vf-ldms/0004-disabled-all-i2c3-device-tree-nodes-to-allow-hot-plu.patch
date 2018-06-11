@@ -1,0 +1,97 @@
+From 7627458a0c2780246a55d9bf229d2104c54c70ba Mon Sep 17 00:00:00 2001
+From: Build user <build@vps3073>
+Date: Mon, 11 Jun 2018 08:43:53 +0200
+Subject: [PATCH 4/4] disabled all i2c3 device tree nodes to allow hot-plugging
+ with reinit from user space
+
+---
+ arch/arm/boot/dts/vf-colibri-ldms.dtsi | 73 ----------------------------------
+ 1 file changed, 73 deletions(-)
+
+diff --git a/arch/arm/boot/dts/vf-colibri-ldms.dtsi b/arch/arm/boot/dts/vf-colibri-ldms.dtsi
+index bf59c33f4316..6a63c1f7d66c 100644
+--- a/arch/arm/boot/dts/vf-colibri-ldms.dtsi
++++ b/arch/arm/boot/dts/vf-colibri-ldms.dtsi
+@@ -189,79 +189,6 @@
+ 	pinctrl-0 = <&pinctrl_i2c3>;
+ 	status = "okay";
+ 
+-	pca9632: pca9632 { /* LED driver */
+-		compatible = "nxp,pca9632";
+-		#address-cells = <1>;
+-		#size-cells = <0>;
+-		reg = <0x62>;
+-		nxp,totem-pole; /* use push-pull outputs */
+-		nxp,inverted-out;
+-
+-		led0@0 {
+-			label = "r_uv";
+-			reg = <0>;
+-			linux,default-trigger = "none";
+-		};	
+-
+-		led1@1 {
+-			label = "g";
+-			reg = <1>;
+-			linux,default-trigger = "none";
+-		};	
+-
+-		led2@2 {
+-			label = "b";
+-			reg = <2>;
+-			linux,default-trigger = "none";
+-		};	
+-
+-		led3@3 {
+-			label = "w";
+-			reg = <3>;
+-			linux,default-trigger = "none";
+-		};
+-	};
+-
+-	pca9536: pca9536@41 { /* I2C GPIO expander */
+-		compatible = "nxp,pca9536";
+-		reg = <0x41>;
+-		gpio-controller;
+-		#gpio-cells = <1>;
+-		pinctrl-names = "default";
+-	};	
+-	
+-	se97lum: se97@1d { /* Temperature sensor on luminance sensing board */
+-		compatible = "jc42";
+-		reg = <0x1d>;
+-	};
+-
+-	se97top: se97@1e { /* Temperature sensor on TE DUT interface board */
+-		compatible = "jc42";
+-		reg = <0x1e>;
+-	};
+-
+-	se97bot: se97@1f { /* Temperature sensor on BE DUT interface board */
+-		compatible = "jc42";
+-		reg = <0x1f>;
+-	};
+-
+-	eepromtop: eeprom@55 { /* EEPROM on TE DUT interface board */
+-		compatible = "at,spd";
+-		reg = <0x55>;
+-		status = "okay";
+-	};
+-
+-	eeprombot: eeprom@56 { /* EEPROM on BE DUT interface board */
+-		compatible = "at,spd";
+-		reg = <0x56>;
+-		status = "okay";
+-	};
+-
+-	eepromillum: eeprom@57 { /* EEPROM on illumination board */
+-		compatible = "at,spd";
+-		reg = <0x57>;
+-		status = "okay";
+-	};
+ };
+ 
+ &pwm0 {
+-- 
+2.11.0
+
