@@ -1,7 +1,7 @@
 From 3394434445e947f8c6be0e7200a0e0868b47bfab Mon Sep 17 00:00:00 2001
 From: Build user <build@vps3073>
 Date: Fri, 8 Jun 2018 11:27:24 +0200
-Subject: [PATCH 3/4] enabled JC42 temperature sensor, AT24 EEPROM, PCA9632
+Subject: [PATCH 3/5] enabled JC42 temperature sensor, AT24 EEPROM, PCA9632
  LED, PCA9536 GPIO, in kernel and device tree
 
 ---

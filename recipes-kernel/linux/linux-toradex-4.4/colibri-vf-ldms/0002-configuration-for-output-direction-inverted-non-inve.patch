@@ -1,7 +1,7 @@
 From 6f7aa72fa9e91bcf20ab88609266bd497cd91d89 Mon Sep 17 00:00:00 2001
 From: Build user <build@vps3073>
 Date: Thu, 7 Jun 2018 14:45:21 +0200
-Subject: [PATCH 2/4] configuration for output direction inverted/non-inverted
+Subject: [PATCH 2/5] configuration for output direction inverted/non-inverted
  added
 
 ---
