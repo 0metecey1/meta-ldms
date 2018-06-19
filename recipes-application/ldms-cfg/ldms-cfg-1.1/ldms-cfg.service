@@ -2,7 +2,7 @@
 Description=Setting up  GPIO sysfs interface
 
 [Service]
-ExecStart = /usr/bin/ldms-gpio.sh
+ExecStart = /usr/bin/ldms-cfg
 
 [Install]
 WantedBy=multi-user.target
