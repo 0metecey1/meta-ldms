@@ -1,7 +1,7 @@
 From 7627458a0c2780246a55d9bf229d2104c54c70ba Mon Sep 17 00:00:00 2001
 From: Build user <build@vps3073>
 Date: Mon, 11 Jun 2018 08:43:53 +0200
-Subject: [PATCH 4/4] disabled all i2c3 device tree nodes to allow hot-plugging
+Subject: [PATCH 4/5] disabled all i2c3 device tree nodes to allow hot-plugging
  with reinit from user space
 
 ---

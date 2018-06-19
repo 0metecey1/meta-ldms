@@ -1,0 +1,40 @@
+From 92b7d12664bda2bd81c2bcb678002b7c2fc3d9fb Mon Sep 17 00:00:00 2001
+From: Build user <build@vps3073>
+Date: Mon, 18 Jun 2018 15:41:04 +0200
+Subject: [PATCH 5/5] added spidev device driver for dspi1 to enable the AD5522
+ PPMU
+
+---
+ arch/arm/boot/dts/vf-colibri-ldms.dtsi | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/arch/arm/boot/dts/vf-colibri-ldms.dtsi b/arch/arm/boot/dts/vf-colibri-ldms.dtsi
+index 6a63c1f7d66c..fdc757d2d2b0 100644
+--- a/arch/arm/boot/dts/vf-colibri-ldms.dtsi
++++ b/arch/arm/boot/dts/vf-colibri-ldms.dtsi
+@@ -96,6 +96,22 @@
+ 	};
+ };
+ 
++&dspi1 {
++	bus-num = <1>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&pinctrl_dspi1>;
++	status = "okay";
++
++    /*
++     * AD5522 PPMU
++     */
++    spidev1: spidev@1 {
++             compatible = "toradex,evalspi";
++             reg = <0>;
++             spi-max-frequency = <50000000>;
++    };
++};
++
+ &dspi2 {
+ 	bus-num = <2>;
+ 	pinctrl-names = "default";
+-- 
+2.11.0
+
